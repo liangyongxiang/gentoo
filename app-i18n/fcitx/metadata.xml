@@ -9,6 +9,10 @@
 		<email>cjk@gentoo.org</email>
 		<name>Cjk</name>
 	</maintainer>
+	<maintainer type="person">
+		<email>tanekliang@gmail.com</email>
+		<name>Yongxiang Liang</name>
+	</maintainer>
 	<use>
 		<flag name="autostart">Enable XDG-compatible autostart of Fcitx</flag>
 		<flag name="enchant">Enable Enchant backend (using <pkg>app-text/enchant</pkg>) for spelling hinting</flag>
@@ -18,6 +22,11 @@
 		<flag name="pango">Enable support for <pkg>x11-libs/pango</pkg></flag>
 		<flag name="table">Install table input methods for Simplified Chinese</flag>
 		<flag name="xkb">Enable support for XKB (required for fcitx-xkb, fcitx-xkbdbus, part of fcitx-keyboard)</flag>
+		<flag name="coverage">Build the project with gcov support</flag>
+		<flag name="presage">Enable presage for word predication (not stable)</flag>
+		<flag name="emoji">Enable emoji loading for CLDR</flag>
+		<flag name="keyboard">Enable key event translation with XKB and build keyboard engine</flag>
+		<flag name="server">Build a fcitx as server, disable this option if you want to use fcitx as an embedded library</flag>
 	</use>
 	<upstream>
 		<remote-id type="github">fcitx/fcitx</remote-id>
