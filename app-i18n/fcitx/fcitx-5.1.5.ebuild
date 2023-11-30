@@ -67,6 +67,7 @@ RDEPEND="
 "
 DEPEND="
 	${RDEPEND}
+	!app-i18n/fcitx:4
 	test? (
 		coverage? (
 			dev-util/lcov
