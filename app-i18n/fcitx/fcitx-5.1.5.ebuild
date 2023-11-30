@@ -23,6 +23,7 @@ REQUIRED_USE="
 RESTRICT="!test? ( test )"
 
 RDEPEND="
+	!app-i18n/fcitx:4
 	dev-libs/libevent
 	dev-libs/libfmt
 	doc? ( app-doc/doxygen )
