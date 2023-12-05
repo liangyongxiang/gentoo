@@ -7,6 +7,9 @@ PYTHON_COMPAT=( python3_{10..11} )
 
 inherit desktop edo elisp-common multiprocessing python-any-r1 savedconfig toolchain-funcs xdg
 
+DESCRIPTION="Mozc - Japanese input method editor"
+HOMEPAGE="https://github.com/google/mozc"
+
 if [[ "${PV}" == "9999" ]]; then
 	inherit git-r3
 
@@ -24,18 +27,12 @@ else
 
 	JAPANESE_USAGE_DICTIONARY_GIT_REVISION="a4a66772e33746b91e99caceecced9a28507e925"
 	JAPANESE_USAGE_DICTIONARY_DATE="20180701040110"
-fi
 
-DESCRIPTION="Mozc - Japanese input method editor"
-HOMEPAGE="https://github.com/google/mozc"
-if [[ "${PV}" == "9999" ]]; then
-	SRC_URI=""
-else
 	SRC_URI="
 		https://github.com/google/${PN}/archive/${MOZC_GIT_REVISION}.tar.gz -> ${PN}-${PV%%_p*}-${MOZC_DATE}.tar.gz
 		https://github.com/hiroyuki-komatsu/japanese-usage-dictionary/archive/${JAPANESE_USAGE_DICTIONARY_GIT_REVISION}.tar.gz -> japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_DATE}.tar.gz
 		https://dev.gentoo.org/~sam/distfiles/${CATEGORY}/${PN}/${PN}-2.28.5029.102-patches.tar.xz
-		fcitx4? ( https://github.com/fcitx/${PN}/archive/${FCITX_MOZC_GIT_REVISION}.tar.gz -> fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz )
+		https://github.com/fcitx/${PN}/archive/${FCITX_MOZC_GIT_REVISION}.tar.gz -> fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz
 	"
 fi
 
@@ -45,9 +42,9 @@ fi
 # japanese-usage-dictionary: BSD-2
 LICENSE="BSD BSD-2 ipadic public-domain unicode"
 SLOT="0"
-KEYWORDS="~amd64 ~arm64 ~ppc64 ~x86"
-IUSE="debug emacs fcitx4 +gui ibus renderer test"
-REQUIRED_USE="|| ( emacs fcitx4 ibus )"
+KEYWORDS="~amd64 ~arm64 ~x86"
+IUSE="debug emacs fcitx4 fcitx5 +gui ibus renderer test"
+REQUIRED_USE="|| ( emacs fcitx4 fcitx5 ibus )"
 RESTRICT="!test? ( test )"
 
 BDEPEND="
@@ -58,12 +55,19 @@ BDEPEND="
 	virtual/pkgconfig
 	emacs? ( app-editors/emacs:* )
 	fcitx4? ( sys-devel/gettext )
+	fcitx5? ( sys-devel/gettext )
 "
 DEPEND="
 	>=dev-cpp/abseil-cpp-20230802.0:=[cxx17(+)]
 	>=dev-libs/protobuf-3.0.0:=
 	fcitx4? (
 		app-i18n/fcitx:4
+		virtual/libintl
+	)
+	fcitx5? (
+		app-i18n/fcitx:5
+		app-i18n/libime
+		sys-devel/gettext
 		virtual/libintl
 	)
 	gui? (
@@ -92,6 +96,12 @@ RDEPEND="
 	emacs? ( app-editors/emacs:* )
 	fcitx4? (
 		app-i18n/fcitx:4
+		virtual/libintl
+	)
+	fcitx5? (
+		app-i18n/fcitx:5
+		app-i18n/libime
+		sys-devel/gettext
 		virtual/libintl
 	)
 	gui? (
@@ -130,10 +140,13 @@ src_unpack() {
 	if [[ "${PV}" == "9999" ]]; then
 		git-r3_src_unpack
 
-		if use fcitx4; then
+		if use fcitx4 || fcitx5; then
 			local EGIT_SUBMODULES=()
 			git-r3_fetch https://github.com/fcitx/mozc refs/heads/fcitx
 			git-r3_checkout https://github.com/fcitx/mozc "${WORKDIR}/fcitx-mozc"
+		fi
+		if use fcitx5; then
+			cp -pr "${WORKDIR}"/fcitx{,5}-mozc || die
 		fi
 	else
 		unpack ${PN}-${PV%%_p*}-${MOZC_DATE}.tar.gz
@@ -144,9 +157,12 @@ src_unpack() {
 		unpack japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_DATE}.tar.gz
 		cp -p japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_GIT_REVISION}/usage_dict.txt ${P}/src/third_party/japanese_usage_dictionary || die
 
+		unpack fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz
 		if use fcitx4; then
-			unpack fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz
-			mv mozc-${FCITX_MOZC_GIT_REVISION} fcitx-${PN} || die
+			cp -pr mozc-${FCITX_MOZC_GIT_REVISION} fcitx-${PN} || die
+		fi
+		if use fcitx5; then
+			cp -pr mozc-${FCITX_MOZC_GIT_REVISION} fcitx5-${PN} || die
 		fi
 	fi
 }
@@ -155,6 +171,10 @@ src_prepare() {
 	if use fcitx4; then
 		cp -pr "${WORKDIR}/fcitx-mozc/src/unix/fcitx" unix || die
 		PATCHES+=( "${FILESDIR}"/mozc-2.28.5029.102-abseil-20230802.0-fcitx4.patch )
+	fi
+	if use fcitx5; then
+		cp -pr "${WORKDIR}/fcitx5-mozc/src/unix/fcitx5" unix || die
+		PATCHES+=( "${FILESDIR}"/mozc-2.28.5029.102-abseil-20230802.0-fcitx5.patch )
 	fi
 
 	pushd "${WORKDIR}/${P}" > /dev/null || die
@@ -226,6 +246,7 @@ src_configure() {
 	gyp_arguments+=(-D release_extra_cflags=)
 
 	gyp_arguments+=(-D use_fcitx=$(usex fcitx4 YES NO))
+	gyp_arguments+=(-D use_fcitx5=$(usex fcitx5 YES NO))
 	gyp_arguments+=(-D use_libibus=$(usex ibus 1 0))
 	gyp_arguments+=(-D use_libprotobuf=1)
 	gyp_arguments+=(-D use_system_abseil_cpp=1)
@@ -258,6 +279,9 @@ src_compile() {
 	fi
 	if use fcitx4; then
 		targets+=(unix/fcitx/fcitx.gyp:fcitx-mozc)
+	fi
+	if use fcitx5; then
+		targets+=(unix/fcitx5/fcitx5.gyp:fcitx5-mozc)
 	fi
 	if use gui; then
 		targets+=(gui/gui.gyp:mozc_tool)
@@ -334,6 +358,41 @@ src_install() {
 			insinto /usr/share/locale/${locale}/LC_MESSAGES
 			newins "${mo_file}" fcitx-mozc.mo
 		done
+	fi
+
+	if use fcitx5; then
+		exeinto /usr/$(get_libdir)/fcitx5
+		doexe out_linux/${BUILD_TYPE}/fcitx5-mozc.so
+
+		insinto /usr/share/fcitx5/addon
+		newins unix/fcitx5/mozc-addon.conf mozc.conf
+
+		insinto /usr/share/fcitx5/inputmethod
+		doins unix/fcitx5/mozc.conf
+
+		local orgfcitx5="org.fcitx.Fcitx5.fcitx-mozc"
+		newicon -s 128 data/images/product_icon_32bpp-128.png ${orgfcitx5}.png
+		newicon -s 128 data/images/product_icon_32bpp-128.png fcitx-mozc.png
+		newicon -s 32 data/images/unix/ime_product_icon_opensource-32.png ${orgfcitx5}.png
+		newicon -s 32 data/images/unix/ime_product_icon_opensource-32.png fcitx-mozc.png
+		for uiimg in ../../fcitx5-mozc/scripts/icons/ui-*.png; do
+			dimg=${uiimg#*ui-}
+			newicon -s 48 ${uiimg} ${orgfcitx5}-${dimg/_/-}
+			newicon -s 48 ${uiimg} fcitx-mozc-${dimg/_/-}
+		done
+
+		local locale mo_file
+		for mo_file in unix/fcitx5/po/*.po; do
+			locale="${mo_file##*/}"
+			locale="${locale%.po}"
+			msgfmt ${mo_file} -o ${mo_file/.po/.mo} || die
+			insinto /usr/share/locale/${locale}/LC_MESSAGES
+			newins "${mo_file/.po/.mo}" fcitx5-mozc.mo
+		done
+		msgfmt --xml -d unix/fcitx5/po/ --template unix/fcitx5/org.fcitx.Fcitx5.Addon.Mozc.metainfo.xml.in -o \
+			unix/fcitx5/org.fcitx.Fcitx5.Addon.Mozc.metainfo.xml || die
+		insinto /usr/share/metainfo
+		doins unix/fcitx5/org.fcitx.Fcitx5.Addon.Mozc.metainfo.xml
 	fi
 
 	if use ibus; then

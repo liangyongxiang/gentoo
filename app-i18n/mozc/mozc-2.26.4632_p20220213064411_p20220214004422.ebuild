@@ -2,10 +2,9 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="8"
+PYTHON_COMPAT=( python3_{9..11} )
 
-PYTHON_COMPAT=( python3_{10..11} )
-
-inherit desktop edo elisp-common multiprocessing python-any-r1 savedconfig toolchain-funcs xdg
+inherit elisp-common multiprocessing python-any-r1 toolchain-funcs desktop xdg
 
 DESCRIPTION="Mozc - Japanese input method editor"
 HOMEPAGE="https://github.com/google/mozc"
@@ -16,11 +15,11 @@ if [[ "${PV}" == "9999" ]]; then
 	EGIT_REPO_URI="https://github.com/google/mozc"
 	EGIT_SUBMODULES=(src/third_party/japanese_usage_dictionary)
 else
-	MOZC_GIT_REVISION="305e9a7374254148474d067c46d55a4ee6081837"
+	MOZC_GIT_REVISION="7f02ce1923516502854aa48a95e2c1e84a3e5a9f"
 	MOZC_DATE="${PV#*_p}"
 	MOZC_DATE="${MOZC_DATE%%_p*}"
 
-	FCITX_MOZC_GIT_REVISION="242b4f703cba27d4ff4dc123c713a478f964e001"
+	FCITX_MOZC_GIT_REVISION="36fb17175ceb2ade323ad729e0d7cfb06f98e675"
 	FCITX_MOZC_DATE="${PV#*_p}"
 	FCITX_MOZC_DATE="${FCITX_MOZC_DATE#*_p}"
 	FCITX_MOZC_DATE="${FCITX_MOZC_DATE%%_p*}"
@@ -28,12 +27,9 @@ else
 	JAPANESE_USAGE_DICTIONARY_GIT_REVISION="a4a66772e33746b91e99caceecced9a28507e925"
 	JAPANESE_USAGE_DICTIONARY_DATE="20180701040110"
 
-	SRC_URI="
-		https://github.com/google/${PN}/archive/${MOZC_GIT_REVISION}.tar.gz -> ${PN}-${PV%%_p*}-${MOZC_DATE}.tar.gz
+	SRC_URI="https://github.com/google/${PN}/archive/${MOZC_GIT_REVISION}.tar.gz -> ${PN}-${PV%%_p*}-${MOZC_DATE}.tar.gz
 		https://github.com/hiroyuki-komatsu/japanese-usage-dictionary/archive/${JAPANESE_USAGE_DICTIONARY_GIT_REVISION}.tar.gz -> japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_DATE}.tar.gz
-		https://dev.gentoo.org/~sam/distfiles/${CATEGORY}/${PN}/${PN}-2.28.5029.102-patches.tar.xz
-		https://github.com/fcitx/${PN}/archive/${FCITX_MOZC_GIT_REVISION}.tar.gz -> fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz
-	"
+		https://github.com/fcitx/${PN}/archive/${FCITX_MOZC_GIT_REVISION}.tar.gz -> fcitx-${PN}-${PV%%_p*}-${FCITX_MOZC_DATE}.tar.gz"
 fi
 
 # Mozc: BSD
@@ -42,23 +38,21 @@ fi
 # japanese-usage-dictionary: BSD-2
 LICENSE="BSD BSD-2 ipadic public-domain unicode"
 SLOT="0"
-KEYWORDS="~amd64 ~arm64 ~x86"
+#KEYWORDS="~amd64 ~arm64 ~ppc64 x86"
+KEYWORDS="~amd64 ~x86"
 IUSE="debug emacs fcitx4 fcitx5 +gui ibus renderer test"
 REQUIRED_USE="|| ( emacs fcitx4 fcitx5 ibus )"
 RESTRICT="!test? ( test )"
 
-BDEPEND="
-	$(python_gen_any_dep 'dev-python/six[${PYTHON_USEDEP}]')
+BDEPEND="$(python_gen_any_dep 'dev-python/six[${PYTHON_USEDEP}]')
 	>=dev-libs/protobuf-3.0.0
 	dev-util/gyp
 	dev-util/ninja
 	virtual/pkgconfig
 	emacs? ( app-editors/emacs:* )
 	fcitx4? ( sys-devel/gettext )
-	fcitx5? ( sys-devel/gettext )
-"
-DEPEND="
-	>=dev-cpp/abseil-cpp-20211102.0-r2:=[cxx17(+)]
+	fcitx5? ( sys-devel/gettext )"
+DEPEND=">=dev-cpp/abseil-cpp-20211102[cxx17(+)]
 	>=dev-libs/protobuf-3.0.0:=
 	fcitx4? (
 		app-i18n/fcitx:4
@@ -90,8 +84,7 @@ DEPEND="
 		>=dev-cpp/gtest-1.8.0
 		dev-libs/jsoncpp
 	)"
-RDEPEND="
-	>=dev-cpp/abseil-cpp-20211102.0-r2:=[cxx17(+)]
+RDEPEND=">=dev-cpp/abseil-cpp-20211102[cxx17(+)]
 	>=dev-libs/protobuf-3.0.0:=
 	emacs? ( app-editors/emacs:* )
 	fcitx4? (
@@ -119,27 +112,26 @@ RDEPEND="
 		x11-libs/cairo
 		x11-libs/gtk+:2
 		x11-libs/pango
-	)
-"
+	)"
 
 S="${WORKDIR}/${P}/src"
 
 SITEFILE="50${PN}-gentoo.el"
 
-PATCHES=(
-	"${WORKDIR}"/mozc-2.28.5029.102-patches
-	"${FILESDIR}"/mozc-2.28.5029.102-abseil.patch
-)
+execute() {
+	einfo "$@"
+	"$@"
+}
 
 python_check_deps() {
-	python_has_version "dev-python/six[${PYTHON_USEDEP}]"
+	has_version -b "dev-python/six[${PYTHON_USEDEP}]"
 }
 
 src_unpack() {
 	if [[ "${PV}" == "9999" ]]; then
 		git-r3_src_unpack
 
-		if use fcitx4 || fcitx5; then
+		if use fcitx4 || use fcitx5; then
 			local EGIT_SUBMODULES=()
 			git-r3_fetch https://github.com/fcitx/mozc refs/heads/fcitx
 			git-r3_checkout https://github.com/fcitx/mozc "${WORKDIR}/fcitx-mozc"
@@ -150,8 +142,6 @@ src_unpack() {
 	else
 		unpack ${PN}-${PV%%_p*}-${MOZC_DATE}.tar.gz
 		mv mozc-${MOZC_GIT_REVISION} ${P} || die
-
-		unpack ${PN}-2.28.5029.102-patches.tar.xz
 
 		unpack japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_DATE}.tar.gz
 		cp -p japanese-usage-dictionary-${JAPANESE_USAGE_DICTIONARY_GIT_REVISION}/usage_dict.txt ${P}/src/third_party/japanese_usage_dictionary || die
@@ -164,6 +154,8 @@ src_unpack() {
 			cp -pr mozc-${FCITX_MOZC_GIT_REVISION} fcitx5-${PN} || die
 		fi
 	fi
+	xz -cd "${FILESDIR}"/${PN}-2.26.4632-system_abseil-cpp.patch.xz > \
+		"${S}"/${PN}-2.26.4632-system_abseil-cpp.patch || die
 }
 
 src_prepare() {
@@ -175,7 +167,15 @@ src_prepare() {
 	fi
 
 	pushd "${WORKDIR}/${P}" > /dev/null || die
-	default
+
+	eapply "${S}/${PN}-2.26.4632-system_abseil-cpp.patch"
+	eapply "${FILESDIR}/${PN}-2.26.4220-system_gtest.patch"
+	eapply "${FILESDIR}/${PN}-2.26.4220-system_jsoncpp.patch"
+	eapply "${FILESDIR}/${PN}-2.26.4632-environmental_variables.patch"
+#	eapply "${FILESDIR}/${PN}-2.26.4632-server_path_check.patch"
+
+	eapply_user
+
 	popd > /dev/null || die
 
 	sed \
@@ -210,16 +210,9 @@ src_prepare() {
 
 	# https://github.com/google/mozc/issues/489
 	sed \
-		-e "/'-lc++'/d" \
+		-e "/'-lc++'/s/-lc++/-Wl,--copy-dt-needed-entries/" \
 		-e "/'-stdlib=libc++'/d" \
 		-i gyp/common.gypi || die
-
-	# bug #877765
-	restore_config mozcdic-ut.txt
-	if [[ -f /mozcdic-ut.txt && -s mozcdic-ut.txt ]]; then
-		einfo "mozcdic-ut.txt found. Adding to mozc dictionary..."
-		cat mozcdic-ut.txt >> "${WORKDIR}/${P}/src/data/dictionary_oss/dictionary00.txt" || die
-	fi
 }
 
 src_configure() {
@@ -261,12 +254,12 @@ src_configure() {
 
 	unset AR CC CXX LD NM READELF
 
-	edo "${PYTHON}" build_mozc.py gyp \
+	execute "${PYTHON}" build_mozc.py gyp \
 		--gypdir="${EPREFIX}/usr/bin" \
 		--server_dir="${EPREFIX}/usr/libexec/mozc" \
 		--verbose \
 		$(usex gui "" --noqt) \
-		-- "${gyp_arguments[@]}"
+		-- "${gyp_arguments[@]}" || die "Configuration failed"
 }
 
 src_compile() {
@@ -293,11 +286,7 @@ src_compile() {
 		targets+=(gyp/tests.gyp:unittests)
 	fi
 
-	if use ibus; then
-		GYP_IBUS_FLAG="--use_gyp_for_ibus_build"
-	fi
-
-	edo "${PYTHON}" build_mozc.py build -c ${BUILD_TYPE} ${GYP_IBUS_FLAG} -v "${targets[@]}"
+	execute "${PYTHON}" build_mozc.py build -c ${BUILD_TYPE} -v "${targets[@]}" || die "Building failed"
 
 	if use emacs; then
 		elisp-compile unix/emacs/*.el
@@ -305,14 +294,12 @@ src_compile() {
 }
 
 src_test() {
-	edo "${PYTHON}" build_mozc.py runtests -c ${BUILD_TYPE} --test_jobs 1
+	execute "${PYTHON}" build_mozc.py runtests -c ${BUILD_TYPE} --test_jobs 1 || die "Testing failed"
 }
 
 src_install() {
 	exeinto /usr/libexec/mozc
 	doexe out_linux/${BUILD_TYPE}/mozc_server
-
-	[[ -s mozcdic-ut.txt ]] && save_config mozcdic-ut.txt
 
 	if use gui; then
 		doexe out_linux/${BUILD_TYPE}/mozc_tool
@@ -356,7 +343,6 @@ src_install() {
 			newins "${mo_file}" fcitx-mozc.mo
 		done
 	fi
-
 	if use fcitx5; then
 		exeinto /usr/$(get_libdir)/fcitx5
 		doexe out_linux/${BUILD_TYPE}/fcitx5-mozc.so
@@ -412,13 +398,13 @@ pkg_postinst() {
 	elog
 	elog "ENVIRONMENTAL VARIABLES"
 	elog
-	elog "MOZC_SERVER_DIRECTORY"
+	elog "MOZC_SERVER_DIR"
 	elog "  Mozc server directory"
 	elog "  Value used by default: \"${EPREFIX}/usr/libexec/mozc\""
-	elog "MOZC_DOCUMENTS_DIRECTORY"
+	elog "MOZC_DOCUMENTS_DIR"
 	elog "  Mozc documents directory"
 	elog "  Value used by default: \"${EPREFIX}/usr/libexec/mozc/documents\""
-	elog "MOZC_CONFIGURATION_DIRECTORY"
+	elog "MOZC_CONFIGURATION_DIR"
 	elog "  Mozc configuration directory"
 	elog "  Value used by default: \"~/.mozc\""
 	elog
