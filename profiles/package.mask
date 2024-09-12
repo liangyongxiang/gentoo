@@ -33,6 +33,24 @@
 
 #--- END OF EXAMPLES ---
 
+# Yongxiang Liang <tanekliang@gmail.org> (2024-09-29)
+# Fcitx 4 has been archived. Users can upgrade to Fcitx 5
+# app-i18n/fcitx:4 is not included so as not to affect packages
+# that depend on it
+app-i18n/fcitx-anthy:4
+app-i18n/fcitx-chewing:4
+app-i18n/fcitx-cloudpinyin:4
+app-i18n/fcitx-configtool:4
+app-i18n/fcitx-hangul:4
+app-i18n/fcitx-libpinyin:4
+app-i18n/fcitx-m17n:4
+app-i18n/fcitx-qt5:4
+app-i18n/fcitx-rime:4
+app-i18n/fcitx-sayura:4
+app-i18n/fcitx-table-extra:4
+app-i18n/fcitx-unikey:4
+app-i18n/kcm-fcitx
+
 # Sam James <sam@gentoo.org> (2024-09-30)
 # GCC 10 and older no longer receive upstream support or fixes for
 # bugs. Please switch to a newer GCC version using gcc-config.
